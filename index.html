@@ -41,7 +41,9 @@ function resizeCanvas(){
 window.addEventListener('resize',resizeCanvas); resizeCanvas();
 
 // Game variables
-let player={x:150,y:H-60,w:40,h:40,vY:0,flipped:false,shield:false,trails:[]};
+const laneTop = 20;
+const laneBottom = H - 60;
+let player={x:150,y:laneBottom,w:40,h:40,flipped:false,shield:false,trails:[]};
 let obstacles=[],particles=[],powerups=[];
 let speed=6,score=0,gameOver=false,spawnInterval=1200,spawnTimer=0,powerTimer=0,multiplier=1;
 let difficultyLevel=0;
@@ -62,16 +64,29 @@ const hitSound=new Audio('https://assets.codepen.io/3/hit.mp3');
 
 // Controls
 function flip(){
-  if(gameOver) return;
-  player.flipped=!player.flipped; player.vY=0;
-  flipSound.play();
-  for(let i=0;i<20;i++) particles.push({
-    x:player.x+player.w/2,
-    y:player.y+player.h/2,
-    vx:(Math.random()-0.5)*6,
-    vy:(Math.random()-0.5)*6,
-    life:30
-  });
+    if(gameOver) return;
+
+    // Snap to lanes
+    if(player.flipped){
+        player.y = laneBottom;
+        player.flipped = false;
+    } else {
+        player.y = laneTop;
+        player.flipped = true;
+    }
+
+    // Particle effect
+    flipSound.play();
+    for(let i=0;i<20;i++) particles.push({
+        x:player.x+player.w/2,
+        y:player.y+player.h/2,
+        vx:(Math.random()-0.5)*6,
+        vy:(Math.random()-0.5)*6,
+        life:30
+    });
+
+    // Neon trail
+    player.trails.push({x:player.x+player.w/2,y:player.y+player.h/2,life:20});
 }
 window.addEventListener('keydown',e=>{if(e.code==='Space') flip();});
 canvas.addEventListener('pointerdown',flip);
@@ -79,7 +94,7 @@ canvas.addEventListener('pointerdown',flip);
 // Restart
 const restartBtn=document.getElementById('restartBtn');
 restartBtn.addEventListener('click',()=>{
-  player={x:150,y:H-60,w:40,h:40,vY:0,flipped:false,shield:false,trails:[]};
+  player={x:150,y:laneBottom,w:40,h:40,flipped:false,shield:false,trails:[]};
   obstacles=[];particles=[];powerups=[];speed=6;spawnInterval=1200;score=0;spawnTimer=0;gameOver=false;multiplier=1; difficultyLevel=0;
   restartBtn.style.display='none'; requestAnimationFrame(gameLoop);
 });
@@ -87,14 +102,14 @@ restartBtn.addEventListener('click',()=>{
 // Spawn obstacles
 function spawnObstacle(){
   const h=30+Math.random()*70,moving=Math.random()<0.3;
-  const y=Math.random()<0.5?20: H-20-h;
+  const y = Math.random()<0.5 ? laneTop : laneBottom;
   obstacles.push({x:W+20,y:y,w:20,h:h,moving:moving,dir:1});
 }
 
 // Spawn powerups
 function spawnPowerup(){
   const types=['shield','multiplier'],type=types[Math.floor(Math.random()*types.length)];
-  const y=Math.random()<0.5?20:H-40;
+  const y = Math.random()<0.5 ? laneTop : laneBottom;
   powerups.push({x:W+20,y:y,w:20,h:20,type:type});
 }
 
@@ -115,14 +130,7 @@ function gameLoop(now){
 
   ctx.clearRect(0,0,W,H);
 
-  // Gravity
-  const gravity=0.7;
-  if(player.flipped){player.vY-=gravity;if(player.y<0) player.y=0;}
-  else{player.vY+=gravity;if(player.y+player.h>H) player.y=H-player.h;}
-  player.y+=player.vY;
-
   // Neon trail
-  player.trails.push({x:player.x+player.w/2,y:player.y+player.h/2,life:20});
   for(let i=player.trails.length-1;i>=0;i--){
     const t=player.trails[i];
     ctx.fillStyle='rgba(0,255,240,'+t.life/20+')';
@@ -141,7 +149,7 @@ function gameLoop(now){
   // Obstacles
   for(let i=obstacles.length-1;i>=0;i--){
     let ob=obstacles[i]; ob.x-=speed;
-    if(ob.moving){ob.y+=ob.dir*2;if(ob.y<0||ob.y+ob.h>H) ob.dir*=-1;}
+    if(ob.moving){ob.y+=ob.dir*2;if(ob.y!==laneTop && ob.y!==laneBottom) ob.dir*=-1;}
     ctx.fillStyle='#ff4d4d'; ctx.shadowColor='#ff4d4d'; ctx.shadowBlur=8;
     ctx.fillRect(ob.x,ob.y,ob.w,ob.h); ctx.shadowBlur=0;
 
@@ -176,7 +184,7 @@ function gameLoop(now){
   // Update difficulty
   updateDifficulty();
 
-  // Floor
+  // Floor / middle line
   ctx.fillStyle='#0a1020'; ctx.fillRect(0,H/2-2,W,4); ctx.fillRect(0,H-10,W,10);
 
   // Particles
