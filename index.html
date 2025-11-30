@@ -1,182 +1,216 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Hyper Ride</title>
-    <style>
-        body {
-            margin: 0;
-            font-family: 'Arial', sans-serif;
-            background-color: #121212;
-            color: #f0f0f0;
-        }
-        header {
-            background-color: #1a1a1a;
-            padding: 20px;
-            text-align: center;
-            border-bottom: 2px solid #ff4d00;
-        }
-        header h1 {
-            margin: 0;
-            color: #ff4d00;
-        }
-        nav {
-            display: flex;
-            justify-content: center;
-            background-color: #1a1a1a;
-            padding: 10px 0;
-            border-bottom: 1px solid #333;
-        }
-        nav a {
-            color: #f0f0f0;
-            text-decoration: none;
-            margin: 0 15px;
-            font-weight: bold;
-        }
-        nav a:hover {
-            color: #ff4d00;
-        }
-        section {
-            padding: 40px 20px;
-            max-width: 1000px;
-            margin: auto;
-        }
-        h2 {
-            color: #ff4d00;
-        }
-        .card {
-            background-color: #1f1f1f;
-            padding: 20px;
-            margin: 20px 0;
-            border-radius: 8px;
-        }
-        .card a {
-            color: #ff4d00;
-            text-decoration: none;
-            font-weight: bold;
-        }
-        .card a:hover {
-            text-decoration: underline;
-        }
-        footer {
-            text-align: center;
-            padding: 20px;
-            border-top: 1px solid #333;
-            color: #888;
-        }
-    </style>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Mirror Runner - NeuroPlay INC</title>
+<style>
+:root{
+  --bg:#04020b;
+  --player:#7cffd6;
+  --obstacle:#ff6b6b;
+  --power:#ffd166;
+  --text:#e9f8f3;
+}
+html,body{margin:0;padding:0;height:100%;background:var(--bg);display:flex;justify-content:center;align-items:center;font-family:sans-serif;overflow:hidden;}
+canvas{background:linear-gradient(180deg,#041123,#020512);display:block;}
+.hud{position:absolute;top:16px;left:16px;color:var(--text);font-weight:bold;font-size:18px;}
+.leaderboard{position:absolute;top:16px;right:16px;color:var(--text);background:rgba(0,0,0,0.2);padding:8px 12px;border-radius:8px;font-size:14px;}
+.btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);padding:12px 20px;background:rgba(255,255,255,0.1);border:none;color:var(--text);cursor:pointer;border-radius:8px;font-weight:bold;display:none;}
+footer{position:absolute;bottom:8px;width:100%;text-align:center;color:#e9f8f3;font-size:14px;pointer-events:none;}
+</style>
 </head>
 <body>
+<div class="hud">Score: <span id="score">0</span></div>
+<div class="leaderboard" id="leaderboard">Leaderboard:<br></div>
+<button class="btn" id="restartBtn">Restart</button>
+<footer>This game is a creation of <strong>NeuroPlay INC</strong></footer>
+<canvas id="gameCanvas"></canvas>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let W = canvas.width = 1000;
+let H = canvas.height = 400;
 
-    <header>
-        <h1>My Hyper Ride</h1>
-        <p>Your ultimate hub for cars, tech, and reviews</p>
-    </header>
+// Resize canvas for mobile
+function resizeCanvas(){
+  const ratio = 16/9;
+  let width = window.innerWidth - 32;
+  let height = window.innerHeight - 32;
+  if(width/height>ratio) width = height*ratio;
+  else height = width/ratio;
+  canvas.style.width = width+'px';
+  canvas.style.height = height+'px';
+}
+window.addEventListener('resize',resizeCanvas);
+resizeCanvas();
 
-    <nav>
-        <a href="#cars">Cars</a>
-        <a href="#tech">Tech</a>
-        <a href="#reviews">Reviews</a>
-    </nav>
+// Game variables
+let player = {x:150,y:H-60,w:40,h:40,vY:0,flipped:false,shield:false};
+let obstacles = [];
+let particles = [];
+let powerups = [];
+let speed = 6;
+let score = 0;
+let gameOver = false;
+let spawnInterval = 1200;
+let spawnTimer = 0;
+let powerTimer = 0;
+let multiplier = 1;
+const leaderboardEl = document.getElementById('leaderboard');
 
-    <!-- Cars Section -->
-    <section id="cars">
-        <h2>Cars</h2>
+// Load leaderboard
+let leaderboard = JSON.parse(localStorage.getItem('mirrorRunnerLeaderboard')||'[]');
+function updateLeaderboard(){
+  leaderboard.sort((a,b)=>b-a);
+  leaderboard = leaderboard.slice(0,5);
+  localStorage.setItem('mirrorRunnerLeaderboard', JSON.stringify(leaderboard));
+  leaderboardEl.innerHTML = 'Leaderboard:<br>' + leaderboard.map(s=>'🏆 '+s).join('<br>');
+}
+updateLeaderboard();
 
-        <div class="card">
-            <h3>Lamborghini Aventador</h3>
-            <p>The Aventador is a beast on the road, with insane speed and futuristic design.</p>
-            <a href="car1.html">Read More →</a>
-        </div>
-        <div class="card">
-            <h3>Ferrari F8 Tributo</h3>
-            <p>Speed, design, and tech compared to Aventador.</p>
-            <a href="car2.html">Read More →</a>
-        </div>
-        <div class="card">
-            <h3>McLaren 720S</h3>
-            <p>Aerodynamics and acceleration meet style and luxury.</p>
-            <a href="car3.html">Read More →</a>
-        </div>
-        <div class="card">
-            <h3>Porsche 911 Turbo S</h3>
-            <p>Classic sports car with modern performance and tech.</p>
-            <a href="car4.html">Read More →</a>
-        </div>
-        <div class="card">
-            <h3>Bugatti Chiron</h3>
-            <p>The ultimate hypercar experience, unmatched speed and engineering.</p>
-            <a href="car5.html">Read More →</a>
-        </div>
-    </section>
+// Controls
+function flip(){
+  if(gameOver) return;
+  player.flipped = !player.flipped;
+  player.vY=0;
+  // Flip particles
+  for(let i=0;i<15;i++){
+    particles.push({
+      x:player.x+player.w/2,
+      y:player.y+player.h/2,
+      vx:(Math.random()-0.5)*6,
+      vy:(Math.random()-0.5)*6,
+      life:30
+    });
+  }
+}
+window.addEventListener('keydown', e=>{if(e.code==='Space') flip();});
+canvas.addEventListener('pointerdown', flip);
 
-    <!-- Tech Section -->
-    <section id="tech">
-        <h2>Tech</h2>
+// Restart
+const restartBtn = document.getElementById('restartBtn');
+restartBtn.addEventListener('click',()=>{
+  player={x:150,y:H-60,w:40,h:40,vY:0,flipped:false,shield:false};
+  obstacles=[]; particles=[]; powerups=[]; speed=6; spawnInterval=1200; score=0; spawnTimer=0; gameOver=false; multiplier=1;
+  restartBtn.style.display='none';
+  requestAnimationFrame(gameLoop);
+});
 
-        <div class="card">
-            <h3>iPhone 17 vs Samsung S25</h3>
-            <p>Compare display, performance, battery, and camera features of the latest flagship phones.</p>
-            <a href="tech1.html">Read More →</a>
-        </div>
-        <div class="card">
-            <h3>MacBook Pro 2025 vs Lenovo Ideapad Gen 10</h3>
-            <p>Which laptop is better for performance and portability?</p>
-            <a href="tech2.html">Read More →</a>
-        </div>
-        <div class="card">
-            <h3>Apple Watch Ultra vs Samsung Galaxy Watch 7</h3>
-            <p>Fitness, battery life, and smart features comparison.</p>
-            <a href="tech3.html">Read More →</a>
-        </div>
-        <div class="card">
-            <h3>iPad Air 6th Gen vs Samsung Tab S9</h3>
-            <p>Best tablet for students and professionals in 2025.</p>
-            <a href="tech4.html">Read More →</a>
-        </div>
-        <div class="card">
-            <h3>Top 5 Gaming Laptops 2025</h3>
-            <p>Which laptops dominate performance, display, and cooling?</p>
-            <a href="tech5.html">Read More →</a>
-        </div>
-    </section>
+// Spawn obstacles
+function spawnObstacle(){
+  const h = 30 + Math.random()*70;
+  const moving = Math.random()<0.2;
+  const topY = 20 + Math.random()*(H/2-50);
+  const bottomY = H/2 + 20 + Math.random()*(H/2-50);
+  obstacles.push({x:W+20,y:topY,w:20,h:h,moving:moving,dir:1,lane:'top'});
+  obstacles.push({x:W+20,y:bottomY,w:20,h:h,moving:moving,dir:1,lane:'bottom'});
+}
 
-    <!-- Reviews Section -->
-    <section id="reviews">
-        <h2>Reviews</h2>
+// Spawn powerups
+function spawnPowerup(){
+  const types = ['shield','multiplier'];
+  const type = types[Math.floor(Math.random()*types.length)];
+  const topY = 20+Math.random()*(H/2-40);
+  const bottomY = H/2 + 20 + Math.random()*(H/2-40);
+  powerups.push({x:W+20,y:topY,w:20,h:20,type:type,lane:'top'});
+  powerups.push({x:W+20,y:bottomY,w:20,h:20,type:type,lane:'bottom'});
+}
 
-        <div class="card">
-            <h3>Hypercar Event 2025</h3>
-            <p>Our detailed review of the latest hypercar showcase.</p>
-            <a href="review1.html">Read More →</a>
-        </div>
-        <div class="card">
-            <h3>Top Tech Gadgets 2025</h3>
-            <p>The ultimate review of must-have tech for this year.</p>
-            <a href="review2.html">Read More →</a>
-        </div>
-        <div class="card">
-            <h3>Best Electric Cars 2025</h3>
-            <p>From Tesla to Rivian — performance, range, and tech reviewed.</p>
-            <a href="review3.html">Read More →</a>
-        </div>
-        <div class="card">
-            <h3>Smart Home Devices</h3>
-            <p>Voice assistants, cameras, and smart lights tested.</p>
-            <a href="review4.html">Read More →</a>
-        </div>
-        <div class="card">
-            <h3>Top 10 Mobile Games 2025</h3>
-            <p>The best mobile games you must play this year.</p>
-            <a href="review5.html">Read More →</a>
-        </div>
+// Main loop
+let lastTime = performance.now();
+function gameLoop(now){
+  let dt = now - lastTime;
+  lastTime = now;
+  if(gameOver) return;
 
-    </section>
+  ctx.clearRect(0,0,W,H);
 
-    <footer>
-        &copy; 2025 My Hyper Ride | Designed by Neil
-    </footer>
+  // Gravity & movement
+  const gravity = 0.7;
+  if(player.flipped){player.vY-=gravity; if(player.y<0) player.y=0; } 
+  else {player.vY+=gravity; if(player.y+player.h>H) player.y=H-player.h;}
+  player.y += player.vY;
 
+  // Draw player
+  ctx.fillStyle = player.shield ? '#ffd166' : '#7cffd6';
+  ctx.fillRect(player.x,player.y,player.w,player.h);
+
+  // Spawn obstacles
+  spawnTimer += dt;
+  if(spawnTimer>spawnInterval){spawnTimer=0; spawnObstacle();}
+  if(Math.random()<0.005) spawnPowerup();
+
+  // Draw & move obstacles
+  for(let i=obstacles.length-1;i>=0;i--){
+    let ob=obstacles[i];
+    ob.x -= speed;
+    if(ob.moving){ ob.y += ob.dir*2; if(ob.y<0||ob.y+ob.h>H) ob.dir*=-1; }
+    ctx.fillStyle='#ff6b6b';
+    ctx.fillRect(ob.x,ob.y,ob.w,ob.h);
+
+    // Collision
+    const topCheck = ob.lane==='top' && player.y<H/2;
+    const bottomCheck = ob.lane==='bottom' && player.y>=H/2;
+    if(player.x<ob.x+ob.w && player.x+player.w>ob.x && player.y<ob.y+ob.h && player.y+player.h>ob.y && (topCheck||bottomCheck)){
+      if(player.shield){player.shield=false; obstacles.splice(i,1);}
+      else {gameOver=true; leaderboard.push(Math.floor(score)); updateLeaderboard(); restartBtn.style.display='block';}
+    }
+
+    if(ob.x+ob.w<0) obstacles.splice(i,1);
+  }
+
+  // Powerups
+  for(let i=powerups.length-1;i>=0;i--){
+    let p=powerups[i];
+    p.x -= speed;
+    ctx.fillStyle = p.type==='shield'?'#ffd166':'#b77bff';
+    ctx.fillRect(p.x,p.y,p.w,p.h);
+
+    const laneCheck = (p.lane==='top' && player.y<H/2) || (p.lane==='bottom' && player.y>=H/2);
+    if(player.x<p.x+p.w && player.x+player.w>p.x && player.y<p.y+p.h && player.y+player.h>p.y && laneCheck){
+      if(p.type==='shield') player.shield=true;
+      if(p.type==='multiplier'){multiplier=2; powerTimer=3000;}
+      powerups.splice(i,1);
+    }
+
+    if(p.x+p.w<0) powerups.splice(i,1);
+  }
+
+  // Powerup timer
+  if(multiplier>1){
+    powerTimer -= dt;
+    if(powerTimer<=0){multiplier=1;}
+  }
+
+  // Score
+  score += dt*0.01*multiplier;
+  document.getElementById('score').textContent = Math.floor(score);
+
+  // Increase difficulty every 100 points
+  if(Math.floor(score/100) > Math.floor((score-dt*0.01)/100)){
+    speed += 1;
+    spawnInterval = Math.max(500, spawnInterval-100);
+  }
+
+  // Floor & ceiling
+  ctx.fillStyle='#0a1020';
+  ctx.fillRect(0,H/2-2,W,4);
+  ctx.fillRect(0,0,W,10);
+  ctx.fillRect(0,H-10,W,10);
+
+  // Particles
+  for(let i=particles.length-1;i>=0;i--){
+    let p=particles[i];
+    ctx.fillStyle='rgba(255,255,255,'+p.life/30+')';
+    ctx.fillRect(p.x,p.y,4,4);
+    p.x+=p.vx; p.y+=p.vy; p.life--;
+    if(p.life<=0) particles.splice(i,1);
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+requestAnimationFrame(gameLoop);
+</script>
 </body>
 </html>
